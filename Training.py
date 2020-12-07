@@ -12,7 +12,9 @@ import Test
 import Evaluate
 
 import functools
-from tensorflow.contrib.signal.python.ops import window_ops
+import tensorflow.contrib.signal as sig
+import h5py
+from matplotlib import pyplot as plt
 
 ex = Experiment('Waveunet Training', ingredients=[config_ingredient])
 
@@ -35,10 +37,42 @@ def train(model_config, experiment_id, load_model=None):
     sep_input_shape, sep_output_shape = separator_class.get_padding(np.array(disc_input_shape))
     separator_func = separator_class.get_output
 
-    # Placeholders and input normalisation
-    dataset = Datasets.get_dataset(model_config, sep_input_shape, sep_output_shape, partition="train")
-    iterator = dataset.make_one_shot_iterator()
-    batch = iterator.get_next()
+    if not model_config["task"] == "satb":
+        # Placeholders and input normalisation
+        dataset = Datasets.get_dataset(model_config, sep_input_shape, sep_output_shape, partition="train")
+        iterator = dataset.make_one_shot_iterator()
+        batch = iterator.get_next()
+    else:
+
+        if not os.path.isfile(model_config["satb_hdf5_filepath"]):
+            Datasets.createSATBDataset(model_config)
+
+        if model_config['satb_debug']==True:
+            newDir = "./debug"
+            if not os.path.isdir(newDir):
+                os.mkdir(newDir)
+
+        # Define variable to be fed to gen function
+        dataset = h5py.File(model_config["satb_hdf5_filepath"], "r")
+        out_shape  = (model_config["batch_size"], model_config["num_frames"],1)
+        out_shapes = {'soprano':out_shape,'alto':out_shape,'tenor':out_shape,'bass':out_shape, 'mix':out_shape}
+        out_types = {k: tf.float32 for k in out_shapes}
+        partition='train'
+
+        batchGen = Datasets.SATBBatchGenerator
+        dataset = tf.data.Dataset.from_generator(
+            batchGen, 
+            output_types=out_types, 
+            output_shapes=out_shapes, 
+            args=([model_config["satb_hdf5_filepath"],
+                model_config["batch_size"],
+                model_config["num_frames"],
+                model_config["satb_use_case"],
+                partition,
+                model_config['expected_sr'],
+                model_config['satb_debug']]))
+        iterator = dataset.make_one_shot_iterator()
+        batch = iterator.get_next()
 
     print("Training...")
 
@@ -51,10 +85,9 @@ def train(model_config, experiment_id, load_model=None):
     for key in model_config["source_names"]:
         real_source = batch[key]
         sep_source = separator_sources[key]
-
         if model_config["network"] == "unet_spectrogram" and not model_config["raw_audio_loss"]:
-            window = functools.partial(window_ops.hann_window, periodic=True)
-            stfts = tf.contrib.signal.stft(tf.squeeze(real_source, 2), frame_length=1024, frame_step=768,
+            window = functools.partial(sig.hann_window, periodic=True)
+            stfts = tf.contrib.signal.stft(tf.squeeze(real_source, 2), frame_length=1024, frame_step=256,
                                            fft_length=1024, window_fn=window)
             real_mag = tf.abs(stfts)
             separator_loss += tf.reduce_mean(tf.abs(real_mag - sep_source))

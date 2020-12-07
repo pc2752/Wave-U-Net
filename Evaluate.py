@@ -190,7 +190,7 @@ def produce_source_estimates(model_config, load_model, input_path, output_path=N
         os.makedirs(output_path)
     assert(os.path.exists(output_path))
     for source_name, source_audio in list(sources_pred.items()):
-        librosa.output.write_wav(os.path.join(output_path, input_filename) + "_" + source_name + ".wav", source_audio, sr)
+        librosa.output.write_wav(os.path.join(output_path, os.path.splitext(input_filename)[0]) + "_" + source_name + ".wav", source_audio, sr)
 
 def compute_mean_metrics(json_folder, compute_averages=True, metric="SDR"):
     '''

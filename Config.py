@@ -6,9 +6,15 @@ config_ingredient = Ingredient("cfg")
 @config_ingredient.config
 def cfg():
     # Base configuration
-    model_config = {"musdb_path" : "/mnt/windaten/Datasets/MUSDB18/", # SET MUSDB PATH HERE, AND SET CCMIXTER PATH IN CCMixter.xml
-                    "estimates_path" : "/mnt/windaten/Source_Estimates", # SET THIS PATH TO WHERE YOU WANT SOURCE ESTIMATES PRODUCED BY THE TRAINED MODEL TO BE SAVED. Folder itself must exist!
+    model_config = {"musdb_path" : "./data/musdb18", # SET MUSDB PATH HERE, AND SET CCMIXTER PATH IN CCMixter.xml
+                    "estimates_path" : "./Source_Estimates", # SET THIS PATH TO WHERE YOU WANT SOURCE ESTIMATES PRODUCED BY THE TRAINED MODEL TO BE SAVED. Folder itself must exist!
                     "data_path" : "data", # Set this to where the preprocessed dataset should be saved
+                    "satb_path_train" : "../data/satb_dst/train/raw_audio", # SET SATB PATH HERE
+                    "satb_path_valid" : "../data/satb_dst/valid/raw_audio", # SET SATB PATH HERE
+                    "satb_path_test" : "../data/satb_dst/test/raw_audio", # SET SATB PATH HERE
+                    "satb_hdf5_filepath" : "./satb_dataset_only_csd.hdf5",
+                    'satb_debug' : False,
+                    'satb_use_case' : 2, #0: At most, 1: Exactly, 2: At least
 
                     "model_base_dir" : "checkpoints", # Base folder for model checkpoints
                     "log_dir" : "logs", # Base folder for logs files
@@ -22,7 +28,7 @@ def cfg():
                     'filter_size' : 15, # For Wave-U-Net: Filter size of conv in downsampling block
                     'merge_filter_size' : 5, # For Wave-U-Net: Filter size of conv in upsampling block
                     'input_filter_size' : 15, # For Wave-U-Net: Filter size of first convolution in first downsampling block
-                    'output_filter_size': 1, # For Wave-U-Net: Filter size of convolution in the output layer
+                    'output_filter_size': 1, # For Wave-U-Net: Filter size of first convolution in first downsampling block
                     'num_initial_filters' : 24, # Number of filters for convolution in first layer of network
                     "num_frames": 16384, # DESIRED number of time frames in the output waveform per samples (could be changed when using valid padding)
                     'expected_sr': 22050,  # Downsample all audio input to this sampling rate
@@ -32,10 +38,10 @@ def cfg():
                     'context' : False, # Type of padding for convolutions in separator. If False, feature maps double or half in dimensions after each convolution, and convolutions are padded with zeros ("same" padding). If True, convolution is only performed on the available mixture input, thus the output is smaller than the input
                     'network' : 'unet', # Type of network architecture, either unet (our model) or unet_spectrogram (Jansson et al 2017 model)
                     'upsampling' : 'linear', # Type of technique used for upsampling the feature maps in a unet architecture, either 'linear' interpolation or 'learned' filling in of extra samples
-                    'task' : 'voice', # Type of separation task. 'voice' : Separate music into voice and accompaniment. 'multi_instrument': Separate music into guitar, bass, vocals, drums and other (Sisec)
+                    'task' : 'satb', # Type of separation task. 'voice' : Separate music into voice and accompaniment. 'multi_instrument': Separate music into guitar, bass, vocals, drums and other (Sisec)
                     'augmentation' : True, # Random attenuation of source signals to improve generalisation performance (data augmentation)
                     'raw_audio_loss' : True, # Only active for unet_spectrogram network. True: L2 loss on audio. False: L1 loss on spectrogram magnitudes for training and validation and test loss
-                    'worse_epochs' : 20, # Patience for early stoppping on validation set
+                    'worse_epochs' : 50, # Patience for early stoppping on validation set
                     }
     experiment_id = np.random.randint(0,1000000)
 
@@ -44,6 +50,8 @@ def cfg():
         model_config["source_names"] = ["bass", "drums", "other", "vocals"]
     elif model_config["task"] == "voice":
         model_config["source_names"] = ["accompaniment", "vocals"]
+    elif model_config["task"] == "satb":
+        model_config["source_names"] = ["soprano","alto","tenor","bass"]
     else:
         raise NotImplementedError
     model_config["num_sources"] = len(model_config["source_names"])
@@ -140,9 +148,9 @@ def unet_spectrogram():
 
         "network" : "unet_spectrogram",
         "num_layers" : 6,
-        "expected_sr" : 8192,
-        "num_frames" : 768 * 127 + 1024, # hop_size * (time_frames_of_spectrogram_input - 1) + fft_length
-        "duration" : 13,
+        "expected_sr" : 22050,
+        "num_frames" : 256 * 127 + 1024, # hop_size * (time_frames_of_spectrogram_input - 1) + fft_length
+        #"duration" : 13,
         "num_initial_filters" : 16
     }
 
@@ -153,9 +161,9 @@ def unet_spectrogram_l1():
 
         "network" : "unet_spectrogram",
         "num_layers" : 6,
-        "expected_sr" : 8192,
-        "num_frames" : 768 * 127 + 1024, # hop_size * (time_frames_of_spectrogram_input - 1) + fft_length
+        "expected_sr" : 22050,
+        "num_frames" : 256 * 127 + 1024, # hop_size * (time_frames_of_spectrogram_input - 1) + fft_length
         "duration" : 13,
         "num_initial_filters" : 16,
-        "raw_audio_loss" : False
+        "raw_audio_loss" : False,
     }
