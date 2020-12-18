@@ -183,17 +183,19 @@ def produce_source_estimates(model_config, load_model, input_path, output_path=N
 
     sources_pred = predict(track, model_config, load_model) # Input track to prediction function, get source estimates
 
+    return sources_pred
+
     # Save source estimates as audio files into output dictionary
-    input_folder, input_filename = os.path.split(input_path)
-    if output_path is None:
-        # By default, set it to the input_path folder
-        output_path = input_folder
-    if not os.path.exists(output_path):
-        print("WARNING: Given output path " + output_path + " does not exist. Trying to create it...")
-        os.makedirs(output_path)
-    assert(os.path.exists(output_path))
-    for source_name, source_audio in list(sources_pred.items()):
-        sf.write(os.path.join(output_path, os.path.splitext(input_filename)[0]) + "_" + source_name + ".wav", source_audio, sr)
+    # input_folder, input_filename = os.path.split(input_path)
+    # if output_path is None:
+    #     # By default, set it to the input_path folder
+    #     output_path = input_folder
+    # if not os.path.exists(output_path):
+    #     print("WARNING: Given output path " + output_path + " does not exist. Trying to create it...")
+    #     os.makedirs(output_path)
+    # assert(os.path.exists(output_path))
+    # for source_name, source_audio in list(sources_pred.items()):
+    #     sf.write(os.path.join(output_path, os.path.splitext(input_filename)[0]) + "_" + source_name + ".wav", source_audio, sr)
 
 def compute_mean_metrics(json_folder, compute_averages=True, metric="SDR"):
     '''
