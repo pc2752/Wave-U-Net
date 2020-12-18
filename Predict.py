@@ -7,12 +7,13 @@ ex = Experiment('Waveunet Prediction', ingredients=[config_ingredient])
 
 @ex.config
 def cfg():
-    model_path = os.path.join('./Source_Estimates/unet_968405-112000_csd',"968405-112000") # Load stereo vocal model by default
-    input_path = os.path.join("test_set_mixes","dcs","DCS_TPFullChoir_mix.wav") # Which audio file to separate
-    output_path = './Source_Estimates/unet_968405-112000_csd/pred_dcs' # Where to save results. Default: Same location as input.
+    model_path = os.path.join('../../Darius/Wave-U-Net/Source_Estimates/unet_968405-112000_csd',"968405-112000") # Load stereo vocal model by default
+    input_path = os.path.join("../../Darius/Wave-U-Net/test_set_mixes","dcs","DCS_TPFullChoir_mix.wav") # Which audio file to separate
+    output_path = './' # Where to save results. Default: Same location as input.
 
 @ex.automain
 def main(cfg, model_path, input_path, output_path):
+    # import pdb;pdb.set_trace()
     model_config = cfg["model_config"]
     Evaluate.produce_source_estimates(model_config, model_path, input_path, output_path)
 

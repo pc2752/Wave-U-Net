@@ -43,7 +43,7 @@ def cfg():
                     'raw_audio_loss' : True, # Only active for unet_spectrogram network. True: L2 loss on audio. False: L1 loss on spectrogram magnitudes for training and validation and test loss
                     'worse_epochs' : 50, # Patience for early stoppping on validation set
                     }
-    experiment_id = np.random.randint(0,1000000)
+    experiment_id = 'unet_baseline_csd_usecase2'#np.random.randint(0,1000000)
 
     # Set output sources
     if model_config["task"] == "multi_instrument":

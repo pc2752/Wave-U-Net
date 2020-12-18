@@ -92,7 +92,7 @@ def AudioClip(x, training):
         return tf.maximum(tf.minimum(x, 1.0), -1.0)
 
 def resample(audio, orig_sr, new_sr):
-    return librosa.resample(audio.T, orig_sr, new_sr).T
+    return librosa.resample(audio.squeeze().T, orig_sr, new_sr).T
 
 def load(path, sr=22050, mono=True, offset=0.0, duration=None, dtype=np.float32):
     # ALWAYS output (n_frames, n_channels) audio

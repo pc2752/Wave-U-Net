@@ -9,8 +9,9 @@ import glob
 import Models.UnetAudioSeparator
 import Models.UnetSpectrogramSeparator
 
-import musdb
-import museval
+import soundfile as sf
+# import musdb
+# import museval
 import Utils
 
 def predict(track, model_config, load_model, results_dir=None):
@@ -61,7 +62,7 @@ def predict(track, model_config, load_model, results_dir=None):
     separator_preds = predict_track(model_config, sess, mix_audio, orig_sr, sep_input_shape, sep_output_shape, separator_sources, mix_ph)
 
     # Upsample predicted source audio and convert to stereo. Make sure to resample back to the exact number of samples in the original input (with fractional orig_sr/new_sr this causes issues otherwise)
-    pred_audio = {name : Utils.resample(separator_preds[name], model_config["expected_sr"], orig_sr)[:mix_audio.shape[0],:] for name in model_config["source_names"]}
+    pred_audio = {name : Utils.resample(separator_preds[name], model_config["expected_sr"], orig_sr)[:mix_audio.shape[0]] for name in model_config["source_names"]}
 
     if model_config["mono_downmix"] and mix_channels > 1: # Convert to multichannel if mixture input was multichannel by duplicating mono estimate
         pred_audio = {name : np.tile(pred_audio[name], [1, mix_channels]) for name in list(pred_audio.keys())}
@@ -112,6 +113,7 @@ def predict_track(model_config, sess, mix_audio, mix_sr, sep_input_shape, sep_ou
 
     # Preallocate source predictions (same shape as input mixture)
     source_time_frames = mix_audio.shape[0]
+    mix_audio = np.expand_dims(mix_audio, 1)
     source_preds = {name : np.zeros(mix_audio.shape, np.float32) for name in model_config["source_names"]}
 
     input_time_frames = sep_input_shape[1]
@@ -119,6 +121,7 @@ def predict_track(model_config, sess, mix_audio, mix_sr, sep_input_shape, sep_ou
 
     # Pad mixture across time at beginning and end so that neural network can make prediction at the beginning and end of signal
     pad_time_frames = (input_time_frames - output_time_frames) // 2
+
     mix_audio_padded = np.pad(mix_audio, [(pad_time_frames, pad_time_frames), (0,0)], mode="constant", constant_values=0.0)
 
     # Iterate over mixture magnitudes, fetch network rpediction
@@ -190,7 +193,7 @@ def produce_source_estimates(model_config, load_model, input_path, output_path=N
         os.makedirs(output_path)
     assert(os.path.exists(output_path))
     for source_name, source_audio in list(sources_pred.items()):
-        librosa.output.write_wav(os.path.join(output_path, os.path.splitext(input_filename)[0]) + "_" + source_name + ".wav", source_audio, sr)
+        sf.write(os.path.join(output_path, os.path.splitext(input_filename)[0]) + "_" + source_name + ".wav", source_audio, sr)
 
 def compute_mean_metrics(json_folder, compute_averages=True, metric="SDR"):
     '''
